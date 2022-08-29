@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 toml = "0.5.9"
+
+[dev-dependencies]
+serde = "1.0.144"
