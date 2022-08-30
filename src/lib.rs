@@ -36,9 +36,21 @@ impl<'a> fmt::Display for TomlDiff<'a> {
     }
 }
 
-fn format_change<'a>(f: &mut fmt::Formatter, prefix: char, key: Cow<'a, str>, val: &'a TomlValue) -> fmt::Result {
+fn format_change<'a>(
+    f: &mut fmt::Formatter,
+    prefix: char,
+    key: Cow<'a, str>,
+    val: &'a TomlValue,
+) -> fmt::Result {
     match val {
         TomlValue::String(val) => write!(f, "{prefix} {key} = \"{val}\"\n"),
+        TomlValue::Table(table) => {
+            write!(f, "{prefix} [{key}]\n")?;
+            for (key, val) in table {
+                format_change(f, prefix, Cow::Borrowed(key), val)?;
+            }
+            Ok(())
+        },
         val => {
             // TODO: Don't unwrap
             let serialized = toml::to_string(val).unwrap();
@@ -62,11 +74,7 @@ fn diff<'a>(key: Cow<'a, str>, a: &'a TomlValue, b: &'a TomlValue) -> Vec<TomlCh
             loop {
                 if let (Some((a_key, a_val)), Some((b_key, b_val))) = (a_it.peek(), b_it.peek()) {
                     if a_key == b_key {
-                        changes.extend(diff(
-                            Cow::Owned(format!("{key}.{a_key}")),
-                            a_val,
-                            b_val,
-                        ));
+                        changes.extend(diff(Cow::Owned(format!("{key}.{a_key}")), a_val, b_val));
                         a_it.next();
                         b_it.next();
                     } else {
@@ -118,9 +126,9 @@ fn diff<'a>(key: Cow<'a, str>, a: &'a TomlValue, b: &'a TomlValue) -> Vec<TomlCh
 
 #[cfg(test)]
 mod test {
+    use super::TomlDiff;
     use std::fs::read;
     use toml::Value as TomlValue;
-    use super::TomlDiff;
 
     #[test]
     fn test_string_changes() {
@@ -140,6 +148,19 @@ mod test {
 - c = [3, 4, 5]
 - e = [5, 6, 7]
 - f = [6, 7, 8]
+"#;
+        assert_eq!(diff, expected);
+    }
+
+    #[test]
+    fn test_table_changes() {
+        let diff = get_diff("table_a", "table_b");
+        let expected = r#"+ [b]
++ c = "ghi"
++ d = "jkl"
+- [c]
+- e = "nmo"
+- f = "pqr"
 "#;
         assert_eq!(diff, expected);
     }
