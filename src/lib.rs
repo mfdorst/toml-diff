@@ -154,7 +154,7 @@ mod test {
 
     #[test]
     fn test_table_changes() {
-        let diff = get_diff("table_a", "table_b");
+        let diff = get_diff("tables_a", "tables_b");
         let expected = r#"+ [b]
 + c = "ghi"
 + d = "jkl"
