@@ -8,34 +8,26 @@ fn test_string_changes() {
     let diff = TomlDiff::diff(&a, &b);
     let changes = diff.changes;
     assert_eq!(changes.len(), 4);
-    assert!(
-        matches!(
-            &changes[0],
-            TomlChange::Added(Some(key), TomlValue::String(val))
-                if key == "b" && val == "def"
-        )
-    );
-    assert!(
-        matches!(
-            &changes[1],
-            TomlChange::Deleted(Some(key), TomlValue::String(val))
-                if key == "c" && val == "ghi"
-        )
-    );
-    assert!(
-        matches!(
-            &changes[2],
-            TomlChange::Added(Some(key), TomlValue::String(val))
-                if key == "e" && val == "mno"
-        )
-    );
-    assert!(
-        matches!(
-            &changes[3],
-            TomlChange::Added(Some(key), TomlValue::String(val))
-                if key == "f" && val == "pqr"
-        )
-    );
+    assert!(matches!(
+        &changes[0],
+        TomlChange::Added(Some(key), TomlValue::String(val))
+            if key == "b" && val == "def"
+    ));
+    assert!(matches!(
+        &changes[1],
+        TomlChange::Deleted(Some(key), TomlValue::String(val))
+            if key == "c" && val == "ghi"
+    ));
+    assert!(matches!(
+        &changes[2],
+        TomlChange::Added(Some(key), TomlValue::String(val))
+            if key == "e" && val == "mno"
+    ));
+    assert!(matches!(
+        &changes[3],
+        TomlChange::Added(Some(key), TomlValue::String(val))
+            if key == "f" && val == "pqr"
+    ));
 }
 
 #[ignore]
@@ -56,46 +48,38 @@ fn test_array_changes() {
     let diff = TomlDiff::diff(&a, &b);
     let changes = diff.changes;
     assert_eq!(changes.len(), 4);
-    assert!(
-        matches!(
-            &changes[0],
-            TomlChange::Added(Some(key), TomlValue::Array(val))
-                if key == "a"
-                    && matches!(val[0], TomlValue::Integer(1))
-                    && matches!(val[1], TomlValue::Integer(2))
-                    && matches!(val[2], TomlValue::Integer(3))
-        )
-    );
-    assert!(
-        matches!(
-            &changes[1],
-            TomlChange::Deleted(Some(key), TomlValue::Array(val))
-                if key == "c"
-                    && matches!(val[0], TomlValue::Integer(3))
-                    && matches!(val[1], TomlValue::Integer(4))
-                    && matches!(val[2], TomlValue::Integer(5))
-        )
-    );
-    assert!(
-        matches!(
-            &changes[2],
-            TomlChange::Deleted(Some(key), TomlValue::Array(val))
-                if key == "e"
-                    && matches!(val[0], TomlValue::Integer(5))
-                    && matches!(val[1], TomlValue::Integer(6))
-                    && matches!(val[2], TomlValue::Integer(7))
-        )
-    );
-    assert!(
-        matches!(
-            &changes[3],
-            TomlChange::Deleted(Some(key), TomlValue::Array(val))
-                if key == "f"
-                    && matches!(val[0], TomlValue::Integer(6))
-                    && matches!(val[1], TomlValue::Integer(7))
-                    && matches!(val[2], TomlValue::Integer(8))
-        )
-    );
+    assert!(matches!(
+        &changes[0],
+        TomlChange::Added(Some(key), TomlValue::Array(val))
+            if key == "a"
+                && matches!(val[0], TomlValue::Integer(1))
+                && matches!(val[1], TomlValue::Integer(2))
+                && matches!(val[2], TomlValue::Integer(3))
+    ));
+    assert!(matches!(
+        &changes[1],
+        TomlChange::Deleted(Some(key), TomlValue::Array(val))
+            if key == "c"
+                && matches!(val[0], TomlValue::Integer(3))
+                && matches!(val[1], TomlValue::Integer(4))
+                && matches!(val[2], TomlValue::Integer(5))
+    ));
+    assert!(matches!(
+        &changes[2],
+        TomlChange::Deleted(Some(key), TomlValue::Array(val))
+            if key == "e"
+                && matches!(val[0], TomlValue::Integer(5))
+                && matches!(val[1], TomlValue::Integer(6))
+                && matches!(val[2], TomlValue::Integer(7))
+    ));
+    assert!(matches!(
+        &changes[3],
+        TomlChange::Deleted(Some(key), TomlValue::Array(val))
+            if key == "f"
+                && matches!(val[0], TomlValue::Integer(6))
+                && matches!(val[1], TomlValue::Integer(7))
+                && matches!(val[2], TomlValue::Integer(8))
+    ));
 }
 
 #[ignore]
@@ -116,24 +100,20 @@ fn test_table_changes() {
     let diff = TomlDiff::diff(&a, &b);
     let changes = diff.changes;
     assert_eq!(changes.len(), 2);
-    assert!(
-        matches!(
-            &changes[0],
-            TomlChange::Added(Some(key), TomlValue::Table(table))
-                if key == "b"
-                    && matches!(&table["c"], TomlValue::String(val) if val == "ghi")
-                    && matches!(&table["d"], TomlValue::String(val) if val == "jkl")
-        )
-    );
-    assert!(
-        matches!(
-            &changes[1],
-            TomlChange::Deleted(Some(key), TomlValue::Table(table))
-                if key == "c"
-                    && matches!(&table["e"], TomlValue::String(val) if val == "nmo")
-                    && matches!(&table["f"], TomlValue::String(val) if val == "pqr")
-        )
-    );
+    assert!(matches!(
+        &changes[0],
+        TomlChange::Added(Some(key), TomlValue::Table(table))
+            if key == "b"
+                && matches!(&table["c"], TomlValue::String(val) if val == "ghi")
+                && matches!(&table["d"], TomlValue::String(val) if val == "jkl")
+    ));
+    assert!(matches!(
+        &changes[1],
+        TomlChange::Deleted(Some(key), TomlValue::Table(table))
+            if key == "c"
+                && matches!(&table["e"], TomlValue::String(val) if val == "nmo")
+                && matches!(&table["f"], TomlValue::String(val) if val == "pqr")
+    ));
 }
 
 #[ignore]
@@ -149,7 +129,7 @@ fn test_display_table_changes() {
 "#;
     assert_eq!(diff, expected);
 }
- 
+
 #[ignore]
 #[test]
 fn test_display_nested_table_changes() {
@@ -167,7 +147,7 @@ fn get_toml_values<'a>(a: &str, b: &str) -> (TomlValue, TomlValue) {
     let b = read(format!("./test_data/{b}.toml")).unwrap();
     let a = String::from_utf8_lossy(&a);
     let b = String::from_utf8_lossy(&b);
-let a: TomlValue = toml::from_str(&a).unwrap();
+    let a: TomlValue = toml::from_str(&a).unwrap();
     let b: TomlValue = toml::from_str(&b).unwrap();
     (a, b)
 }
