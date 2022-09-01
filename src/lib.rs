@@ -16,7 +16,6 @@ pub enum TomlChange<'a> {
     Same,
     Added(Option<Cow<'a, str>>, &'a TomlValue),
     Deleted(Option<Cow<'a, str>>, &'a TomlValue),
-    Changed(Option<Cow<'a, str>>, &'a TomlValue, &'a TomlValue),
 }
 
 impl<'a> TomlDiff<'a> {
@@ -52,13 +51,15 @@ impl<'a> TomlDiff<'a> {
                     }
                     if discriminant(a_elem) != discriminant(b_elem) {
                         // Elements have different types
-                        changes.push(TomlChange::Changed(None, a_elem, b_elem));
+                        changes.push(TomlChange::Added(None, a_elem));
+                        changes.push(TomlChange::Deleted(None, b_elem));
                         continue;
                     }
                     if a_elem.is_table() || a_elem.is_array() {
                         stack.push((a_elem, b_elem));
                     } else {
-                        changes.push(TomlChange::Changed(None, a_elem, b_elem));
+                        changes.push(TomlChange::Added(None, a_elem));
+                        changes.push(TomlChange::Deleted(None, b_elem));
                     }
                 }
                 // Anything left in `a_it` is an addition (doesn't exist in `b`), and vice versa
@@ -105,21 +106,15 @@ impl<'a> TomlDiff<'a> {
                 // Keys are the same, but the value is different
                 if discriminant(a_val) != discriminant(b_val) {
                     // Values have different types
-                    changes.push(TomlChange::Changed(
-                        Some(Cow::Borrowed(a_key)),
-                        a_val,
-                        b_val,
-                    ));
+                    changes.push(TomlChange::Added(Some(Cow::Borrowed(a_key)), a_val));
+                    changes.push(TomlChange::Deleted(Some(Cow::Borrowed(a_key)), b_val));
                     continue;
                 }
                 if a_val.is_table() || a_val.is_array() {
                     stack.push((a_val, b_val));
                 } else {
-                    changes.push(TomlChange::Changed(
-                        Some(Cow::Borrowed(a_key)),
-                        a_val,
-                        b_val,
-                    ));
+                    changes.push(TomlChange::Added(Some(Cow::Borrowed(a_key)), a_val));
+                    changes.push(TomlChange::Deleted(Some(Cow::Borrowed(a_key)), b_val));
                 }
             }
             // Anything left over in `a_pairs_it` is an addition (doesn't exist in `b`) and vice versa
