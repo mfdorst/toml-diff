@@ -10,23 +10,23 @@ fn test_string() {
     assert_eq!(changes.len(), 4);
     assert!(matches!(
         &changes[0],
-        TomlChange::Added(Some(key), TomlValue::String(val))
-            if key == "b" && val == "def"
+        TomlChange::Added(key_path, TomlValue::String(val))
+            if key_path[0] == "b" && val == "def"
     ));
     assert!(matches!(
         &changes[1],
-        TomlChange::Deleted(Some(key), TomlValue::String(val))
-            if key == "c" && val == "ghi"
+        TomlChange::Deleted(key_path, TomlValue::String(val))
+            if key_path[0] == "c" && val == "ghi"
     ));
     assert!(matches!(
         &changes[2],
-        TomlChange::Added(Some(key), TomlValue::String(val))
-            if key == "e" && val == "mno"
+        TomlChange::Added(key_path, TomlValue::String(val))
+            if key_path[0] == "e" && val == "mno"
     ));
     assert!(matches!(
         &changes[3],
-        TomlChange::Added(Some(key), TomlValue::String(val))
-            if key == "f" && val == "pqr"
+        TomlChange::Added(key_path, TomlValue::String(val))
+            if key_path[0] == "f" && val == "pqr"
     ));
 }
 
@@ -49,32 +49,32 @@ fn test_array() {
     assert_eq!(changes.len(), 4);
     assert!(matches!(
         &changes[0],
-        TomlChange::Added(Some(key), TomlValue::Array(val))
-            if key == "a"
+        TomlChange::Added(key_path, TomlValue::Array(val))
+            if key_path[0] == "a"
                 && matches!(val[0], TomlValue::Integer(1))
                 && matches!(val[1], TomlValue::Integer(2))
                 && matches!(val[2], TomlValue::Integer(3))
     ));
     assert!(matches!(
         &changes[1],
-        TomlChange::Deleted(Some(key), TomlValue::Array(val))
-            if key == "c"
+        TomlChange::Deleted(key_path, TomlValue::Array(val))
+            if key_path[0] == "c"
                 && matches!(val[0], TomlValue::Integer(3))
                 && matches!(val[1], TomlValue::Integer(4))
                 && matches!(val[2], TomlValue::Integer(5))
     ));
     assert!(matches!(
         &changes[2],
-        TomlChange::Deleted(Some(key), TomlValue::Array(val))
-            if key == "e"
+        TomlChange::Deleted(key_path, TomlValue::Array(val))
+            if key_path[0] == "e"
                 && matches!(val[0], TomlValue::Integer(5))
                 && matches!(val[1], TomlValue::Integer(6))
                 && matches!(val[2], TomlValue::Integer(7))
     ));
     assert!(matches!(
         &changes[3],
-        TomlChange::Deleted(Some(key), TomlValue::Array(val))
-            if key == "f"
+        TomlChange::Deleted(key_path, TomlValue::Array(val))
+            if key_path[0] == "f"
                 && matches!(val[0], TomlValue::Integer(6))
                 && matches!(val[1], TomlValue::Integer(7))
                 && matches!(val[2], TomlValue::Integer(8))
@@ -100,15 +100,15 @@ fn test_table() {
     assert_eq!(changes.len(), 2);
     assert!(matches!(
         &changes[0],
-        TomlChange::Added(Some(key), TomlValue::Table(table))
-            if key == "b"
+        TomlChange::Added(key_path, TomlValue::Table(table))
+            if key_path[0] == "b"
                 && matches!(&table["c"], TomlValue::String(val) if val == "ghi")
                 && matches!(&table["d"], TomlValue::String(val) if val == "jkl")
     ));
     assert!(matches!(
         &changes[1],
-        TomlChange::Deleted(Some(key), TomlValue::Table(table))
-            if key == "c"
+        TomlChange::Deleted(key_path, TomlValue::Table(table))
+            if key_path[0] == "c"
                 && matches!(&table["e"], TomlValue::String(val) if val == "nmo")
                 && matches!(&table["f"], TomlValue::String(val) if val == "pqr")
     ));
@@ -127,7 +127,6 @@ fn test_display_table() {
     assert_eq!(diff, expected);
 }
 
-#[ignore]
 #[test]
 fn test_nested_table() {
     let (a, b) = get_toml_values("nested_tables_a", "nested_tables_b");
@@ -136,35 +135,27 @@ fn test_nested_table() {
     assert_eq!(changes.len(), 2);
     assert!(matches!(
         &changes[0],
-        TomlChange::Deleted(Some(key), TomlValue::Table(outer))
-            if key == "outer"
-                && matches!(
-                    &outer["inner_b"],
-                    TomlValue::Table(inner_b)
-                        if matches!(&inner_b["b"], TomlValue::Integer(2))
-        )
+        TomlChange::Added(key_path, TomlValue::Table(table))
+            if key_path[0] == "outer"
+                && key_path[1] == "inner_b"
+                && matches!(&table["b"], TomlValue::Integer(2))
     ));
     assert!(matches!(
         &changes[1],
-        TomlChange::Deleted(Some(key), TomlValue::Table(outer))
-            if key == "outer"
-                && matches!(
-                    &outer["inner_c"],
-                    TomlValue::Table(inner_c)
-                        if matches!(&inner_c["c"], TomlValue::Integer(3))
-        )
+        TomlChange::Deleted(key_path, TomlValue::Table(table))
+            if key_path[0] == "outer"
+                && key_path[1] == "inner_c"
+                && matches!( &table["c"], TomlValue::Integer(3))
     ));
 }
 
-#[ignore]
 #[test]
 fn test_display_nested_table() {
     let diff = get_diff("nested_tables_a", "nested_tables_b");
-    println!("{diff}");
-    let expected = r#"- [outer.inner_b]
-- b = 2
-+ [outer.inner_c]
-+ c = 3
+    let expected = r#"+ [outer.inner_b]
++ b = 2
+- [outer.inner_c]
+- c = 3
 "#;
     assert_eq!(diff, expected);
 }

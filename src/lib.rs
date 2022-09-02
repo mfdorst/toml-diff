@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::mem::discriminant;
 
@@ -12,10 +11,11 @@ pub struct TomlDiff<'a> {
     pub changes: Vec<TomlChange<'a>>,
 }
 
+#[derive(Debug)]
 pub enum TomlChange<'a> {
     Same,
-    Added(Option<Cow<'a, str>>, &'a TomlValue),
-    Deleted(Option<Cow<'a, str>>, &'a TomlValue),
+    Added(Vec<&'a str>, &'a TomlValue),
+    Deleted(Vec<&'a str>, &'a TomlValue),
 }
 
 impl<'a> TomlDiff<'a> {
@@ -30,8 +30,11 @@ impl<'a> TomlDiff<'a> {
             panic!("Expected a table at the top level");
         }
         let mut changes = vec![];
-        let mut stack = vec![(a, b)];
-        while let Some((a, b)) = stack.pop() {
+        // Tracks nested Tables and Arrays that are currently being processed.
+        // The third element of the tuple is a list of keys that represent the "path" to the
+        // current Table or Array.
+        let mut stack = vec![(a, b, vec![])];
+        while let Some((a, b, key_path)) = stack.pop() {
             match (a, b) {
                 (TomlValue::Array(a), TomlValue::Array(b)) => {
                     let mut a_it = a.iter();
@@ -48,20 +51,20 @@ impl<'a> TomlDiff<'a> {
                         }
                         if discriminant(a_elem) != discriminant(b_elem) {
                             // Elements have different types
-                            changes.push(TomlChange::Added(None, a_elem));
-                            changes.push(TomlChange::Deleted(None, b_elem));
+                            changes.push(TomlChange::Added(key_path.clone(), a_elem));
+                            changes.push(TomlChange::Deleted(key_path.clone(), b_elem));
                             continue;
                         }
                         if a_elem.is_table() || a_elem.is_array() {
-                            stack.push((a_elem, b_elem));
+                            stack.push((a_elem, b_elem, key_path.clone()));
                         } else {
-                            changes.push(TomlChange::Added(None, a_elem));
-                            changes.push(TomlChange::Deleted(None, b_elem));
+                            changes.push(TomlChange::Added(key_path.clone(), a_elem));
+                            changes.push(TomlChange::Deleted(key_path.clone(), b_elem));
                         }
                     }
                     // Anything left in `a_it` is an addition (doesn't exist in `b`), and vice versa
-                    changes.extend(a_it.map(|e| TomlChange::Added(None, e)));
-                    changes.extend(b_it.map(|e| TomlChange::Deleted(None, e)));
+                    changes.extend(a_it.map(|e| TomlChange::Added(key_path.clone(), e)));
+                    changes.extend(b_it.map(|e| TomlChange::Deleted(key_path.clone(), e)));
                 }
                 (TomlValue::Table(a), TomlValue::Table(b)) => {
                     let mut a_pairs: Vec<_> = a.iter().collect();
@@ -79,14 +82,17 @@ impl<'a> TomlDiff<'a> {
                         match a_key.cmp(b_key) {
                             Ordering::Less => {
                                 // Keys missing from `b` are considdered "added" in `a`
-                                changes.push(TomlChange::Added(Some(Cow::Borrowed(a_key)), a_val));
+                                let mut key_path = key_path.clone();
+                                key_path.push(a_key);
+                                changes.push(TomlChange::Added(key_path, a_val));
                                 a_pairs_it.next();
                                 continue;
                             }
                             Ordering::Greater => {
                                 // Keys missing from `a` are considered "deleted" from `b`
-                                changes
-                                    .push(TomlChange::Deleted(Some(Cow::Borrowed(b_key)), b_val));
+                                let mut key_path = key_path.clone();
+                                key_path.push(b_key);
+                                changes.push(TomlChange::Deleted(key_path, b_val));
                                 b_pairs_it.next();
                                 continue;
                             }
@@ -95,30 +101,40 @@ impl<'a> TomlDiff<'a> {
                                 b_pairs_it.next();
                             }
                         }
+                        // Keys are the same
                         if a_val == b_val {
                             continue;
                         }
-                        // Keys are the same, but the value is different
+                        let mut key_path = key_path.clone();
+                        key_path.push(a_key);
+
+                        // Values are different
                         if discriminant(a_val) != discriminant(b_val) {
                             // Values have different types
-                            changes.push(TomlChange::Added(Some(Cow::Borrowed(a_key)), a_val));
-                            changes.push(TomlChange::Deleted(Some(Cow::Borrowed(a_key)), b_val));
+                            changes.push(TomlChange::Added(key_path.clone(), a_val));
+                            changes.push(TomlChange::Deleted(key_path, b_val));
                             continue;
                         }
                         if a_val.is_table() || a_val.is_array() {
-                            stack.push((a_val, b_val));
-                        } else {
-                            changes.push(TomlChange::Added(Some(Cow::Borrowed(a_key)), a_val));
-                            changes.push(TomlChange::Deleted(Some(Cow::Borrowed(a_key)), b_val));
+                            stack.push((a_val, b_val, key_path));
+                            continue;
                         }
+                        changes.push(TomlChange::Added(key_path.clone(), a_val));
+                        changes.push(TomlChange::Deleted(key_path, b_val));
                     }
                     // Anything left over in `a_pairs_it` is an addition (doesn't exist in `b`) and vice versa
-                    changes.extend(
-                        a_pairs_it.map(|(k, v)| TomlChange::Added(Some(Cow::Borrowed(k)), v)),
-                    );
-                    changes.extend(
-                        b_pairs_it.map(|(k, v)| TomlChange::Deleted(Some(Cow::Borrowed(k)), v)),
-                    );
+                    changes.extend(a_pairs_it.map(|(k, v)| {
+                        let mut key_path = key_path.clone();
+                        key_path.push(k);
+                        let change = TomlChange::Added(key_path, v);
+                        change
+                    }));
+                    changes.extend(b_pairs_it.map(|(k, v)| {
+                        let mut key_path = key_path.clone();
+                        key_path.push(k);
+                        let change = TomlChange::Deleted(key_path, v);
+                        change
+                    }))
                 }
                 _ => unreachable!("We only ever push `Array`s and `Table`s to `stack`"),
             }
