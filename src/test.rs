@@ -3,7 +3,7 @@ use std::fs::read;
 use toml::Value as TomlValue;
 
 #[test]
-fn test_string_changes() {
+fn test_string() {
     let (a, b) = get_toml_values("strings_a", "strings_b");
     let diff = TomlDiff::diff(&a, &b);
     let changes = diff.changes;
@@ -30,9 +30,8 @@ fn test_string_changes() {
     ));
 }
 
-#[ignore]
 #[test]
-fn test_display_string_changes() {
+fn test_display_string() {
     let diff = get_diff("strings_a", "strings_b");
     let expected = r#"+ b = "def"
 - c = "ghi"
@@ -43,7 +42,7 @@ fn test_display_string_changes() {
 }
 
 #[test]
-fn test_array_changes() {
+fn test_array() {
     let (a, b) = get_toml_values("arrays_a", "arrays_b");
     let diff = TomlDiff::diff(&a, &b);
     let changes = diff.changes;
@@ -82,9 +81,8 @@ fn test_array_changes() {
     ));
 }
 
-#[ignore]
 #[test]
-fn test_display_array_changes() {
+fn test_display_array() {
     let diff = get_diff("arrays_a", "arrays_b");
     let expected = r#"+ a = [1, 2, 3]
 - c = [3, 4, 5]
@@ -95,7 +93,7 @@ fn test_display_array_changes() {
 }
 
 #[test]
-fn test_table_changes() {
+fn test_table() {
     let (a, b) = get_toml_values("tables_a", "tables_b");
     let diff = TomlDiff::diff(&a, &b);
     let changes = diff.changes;
@@ -116,9 +114,8 @@ fn test_table_changes() {
     ));
 }
 
-#[ignore]
 #[test]
-fn test_display_table_changes() {
+fn test_display_table() {
     let diff = get_diff("tables_a", "tables_b");
     let expected = r#"+ [b]
 + c = "ghi"
@@ -132,8 +129,38 @@ fn test_display_table_changes() {
 
 #[ignore]
 #[test]
-fn test_display_nested_table_changes() {
+fn test_nested_table() {
+    let (a, b) = get_toml_values("nested_tables_a", "nested_tables_b");
+    let diff = TomlDiff::diff(&a, &b);
+    let changes = diff.changes;
+    assert_eq!(changes.len(), 2);
+    assert!(matches!(
+        &changes[0],
+        TomlChange::Deleted(Some(key), TomlValue::Table(outer))
+            if key == "outer"
+                && matches!(
+                    &outer["inner_b"],
+                    TomlValue::Table(inner_b)
+                        if matches!(&inner_b["b"], TomlValue::Integer(2))
+        )
+    ));
+    assert!(matches!(
+        &changes[1],
+        TomlChange::Deleted(Some(key), TomlValue::Table(outer))
+            if key == "outer"
+                && matches!(
+                    &outer["inner_c"],
+                    TomlValue::Table(inner_c)
+                        if matches!(&inner_c["c"], TomlValue::Integer(3))
+        )
+    ));
+}
+
+#[ignore]
+#[test]
+fn test_display_nested_table() {
     let diff = get_diff("nested_tables_a", "nested_tables_b");
+    println!("{diff}");
     let expected = r#"- [outer.inner_b]
 - b = 2
 + [outer.inner_c]
@@ -154,7 +181,7 @@ fn get_toml_values<'a>(a: &str, b: &str) -> (TomlValue, TomlValue) {
 
 fn get_diff(a: &str, b: &str) -> String {
     let (a, b) = get_toml_values(a, b);
-    let _diff = TomlDiff::diff(&a, &b);
-    // diff.to_string()
-    todo!()
+    let diff = TomlDiff::diff(&a, &b);
+    diff.to_string()
 }
+

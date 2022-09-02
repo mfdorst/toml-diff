@@ -4,7 +4,7 @@ use std::mem::discriminant;
 
 use toml::Value as TomlValue;
 
-// mod display;
+mod display;
 #[cfg(test)]
 mod test;
 

@@ -1,5 +1,4 @@
-use std::borrow::Cow;
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 use toml::Value as TomlValue;
 
@@ -10,12 +9,8 @@ impl<'a> fmt::Display for TomlDiff<'a> {
         for change in &self.changes {
             match change {
                 TomlChange::Same => Ok(()),
-                // TODO: Don't clone
-                TomlChange::Added(key, val) => format_change(f, '+', key.clone(), val),
-                TomlChange::Deleted(key, val) => format_change(f, '-', key.clone(), val),
-                TomlChange::Changed(_key, _val_a, _val_b) => {
-                    todo!()
-                }
+                TomlChange::Added(key, val) => write!(f, "{}", format_change('+', key.clone(), val)?),
+                TomlChange::Deleted(key, val) => write!(f, "{}", format_change('-', key.clone(), val)?),
             }?;
         }
         Ok(())
@@ -23,25 +18,22 @@ impl<'a> fmt::Display for TomlDiff<'a> {
 }
 
 fn format_change<'a>(
-    f: &mut fmt::Formatter,
     prefix: char,
-    key: Cow<'a, str>,
+    key: Option<Cow<'a, str>>,
     val: &'a TomlValue,
-) -> fmt::Result {
-    match val {
-        TomlValue::String(val) => writeln!(f, "{prefix} {key} = \"{val}\""),
-        TomlValue::Table(table) => {
-            writeln!(f, "{prefix} [{key}]")?;
-            for (key, val) in table {
-                format_change(f, prefix, Cow::Borrowed(key), val)?;
-            }
-            Ok(())
+) -> Result<String, fmt::Error> {
+    let s = match key {
+        Some(key) => {
+            let mut wrapper = toml::map::Map::new();
+            wrapper.insert(key.into_owned(), val.clone());
+            toml::to_string(&wrapper)
         }
-        val => {
-            // TODO: Don't unwrap
-            let serialized = toml::to_string(val).unwrap();
-            // TODO: Colorize
-            writeln!(f, "{prefix} {key} = {serialized}")
-        }
-    }
+        None => toml::to_string(val),
+    }.map_err(|_| fmt::Error)?;
+    // Prepend the prefix to each line
+    Ok(s.lines()
+        .map(|line| format!("{prefix} {line}\n"))
+        .collect::<Vec<_>>()
+        .join(""))
 }
+
