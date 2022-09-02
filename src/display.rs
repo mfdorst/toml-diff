@@ -9,8 +9,12 @@ impl<'a> fmt::Display for TomlDiff<'a> {
         for change in &self.changes {
             match change {
                 TomlChange::Same => Ok(()),
-                TomlChange::Added(key, val) => write!(f, "{}", format_change('+', key.clone(), val)?),
-                TomlChange::Deleted(key, val) => write!(f, "{}", format_change('-', key.clone(), val)?),
+                TomlChange::Added(key, val) => {
+                    write!(f, "{}", format_change('+', key.clone(), val)?)
+                }
+                TomlChange::Deleted(key, val) => {
+                    write!(f, "{}", format_change('-', key.clone(), val)?)
+                }
             }?;
         }
         Ok(())
@@ -29,11 +33,11 @@ fn format_change<'a>(
             toml::to_string(&wrapper)
         }
         None => toml::to_string(val),
-    }.map_err(|_| fmt::Error)?;
+    }
+    .map_err(|_| fmt::Error)?;
     // Prepend the prefix to each line
     Ok(s.lines()
         .map(|line| format!("{prefix} {line}\n"))
         .collect::<Vec<_>>()
         .join(""))
 }
-

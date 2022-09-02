@@ -184,4 +184,3 @@ fn get_diff(a: &str, b: &str) -> String {
     let diff = TomlDiff::diff(&a, &b);
     diff.to_string()
 }
-
